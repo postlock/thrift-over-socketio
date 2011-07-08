@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-define(function (io) {
+define(function () {
     /**
      *If you do not specify a url then you must handle ajax on your own.
      *This is how to use js bindings in a async fashion.
@@ -33,15 +33,6 @@ define(function (io) {
     };
 
     TSocketioTransport.prototype = {
-
-        //Gets the browser specific XmlHttpRequest Object
-        getXmlHttpRequestObject: function() {
-            try { return new XMLHttpRequest(); } catch (e1) { }
-            try { return new ActiveXObject('Msxml2.XMLHTTP'); } catch (e2) { }
-            try { return new ActiveXObject('Microsoft.XMLHTTP'); } catch (e3) { }
-
-            throw "Your browser doesn't support the XmlHttpRequest object.";
-        },
 
         flush: function(async) {
             //async mode
