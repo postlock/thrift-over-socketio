@@ -4,25 +4,40 @@
     <meta HTTP-equiv="X-UA-Compatible" content="IE=EDGE">
     <!--<script type="text/javascript" src="http://fbug.googlecode.com/svn/lite/branches/firebug1.4/content/firebug-lite-dev.js"></script>-->
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/js/thrift_client.js"></script>
-    <script type="text/javascript">
-      function init() {
-      socket = new io.Socket(location.hostname);
-      socket.on('message', function(data){
-         console.log(data);
-      });
-      socket.on('connect', function(){
-         console.log("Imma connectad!");
-         console.log(socket);
-         socket.send({msg: "Erlang rulez!"});
-
-      });
-      socket.connect();
-      }
-    </script>
+    <script data-main="js/demo_main" src="js/lib/require.js"></script>
   </head>
+  <body>
 
-  <body onLoad="init()">
-
-  </body>
+  <h2>Thrift Javascript Bindings</h2>
+  <form action="">
+  <table class="calculator">
+    <tr>
+      <td>num1</td>
+      <td><input type="text" id="num1" value="20" /></td>
+    </tr>
+    <tr>
+      <td>Operation</td>
+      <td><select id="op" size="1"><option></option></select></td>
+    </tr>
+    <tr>
+      <td>num2</td>
+      <td><input type="text" id="num2" value="5"/></td></tr>
+    <tr>
+      <td>result</td>
+      <td><input type="text" id="result" value=""/></td></tr>
+    <tr>
+      <td><input type="checkbox" id="autoupdate" checked="checked"/>autoupdate</td>
+      <td><input type="button" id="calculate" value="calculate" /></td>
+    </tr>
+  </table>
+  </form>
+  
+  <p>This Java Script example uses <a href="https://svn.apache.org/repos/asf/thrift/trunk/tutorial/tutorial.thrift">tutorial.thrift</a> and a Thrift server using JSON protocol and HTTP transport.
+  </p>
+    <p>
+        <a href="http://validator.w3.org/check/referer"><img
+            src="http://www.w3.org/Icons/valid-xhtml10"
+            alt="Valid XHTML 1.0!" height="31" width="88" /></a>
+    </p>
+</body>
 </html>

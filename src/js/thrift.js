@@ -147,7 +147,7 @@ define(function () {
         }
         return length;
     };
-
+    exports.Thrift = exports;
     exports.inherits = inherits;
     return exports;
 });

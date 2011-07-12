@@ -22,9 +22,8 @@ define(function () {
      *This is how to use js bindings in a async fashion.
      */
     var exports = {}, TSocketioTransport;
-    TSocketioTransport = exports.TSocketioTransport = function(url) {
-        this.url = url;
-        this.socket = new io.Socket(this.url);
+    TSocketioTransport = exports.TSocketioTransport = function(socket) {
+        this.socket = socket;
         this.wpos = 0;
         this.rpos = 0;
 
