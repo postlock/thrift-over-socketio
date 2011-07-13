@@ -22,8 +22,9 @@ define(function () {
      *This is how to use js bindings in a async fashion.
      */
     var exports = {}, TAJAXTransport;
-    TAJAXTransport = exports.TAJAXTransport = function(url) {
+    TAJAXTransport = exports.TAJAXTransport = function(url, recv_cb) {
         this.url = url;
+        this.recv_cb = recv_cb;
         this.wpos = 0;
         this.rpos = 0;
 
@@ -40,6 +41,25 @@ define(function () {
             try { return new ActiveXObject('Microsoft.XMLHTTP'); } catch (e3) { }
 
             throw "Your browser doesn't support the XmlHttpRequest object.";
+        },
+
+        recv: function (client) {
+            var message = new client.pClass(this);
+            try {
+                var header = message.readMessageBegin();
+                /*
+                client._reqs[dummy_seqid] = function(err, success){
+                    transport_with_data.commitPosition();
+                    var callback = client._reqs[header.rseqid];
+                    delete client._reqs[header.rseqid];
+                    if (callback) {
+                        callback(err, success);
+                    }
+                };*/
+                client['recv_' + header.fname].apply(client, [message, header.mtype, header.rseqid]);
+            } catch (e) {
+                console.log(e.stack);
+            }
         },
 
         flush: function(async) {
@@ -69,6 +89,7 @@ define(function () {
             this.recv_buf_sz = this.recv_buf.length;
             this.wpos = this.recv_buf.length;
             this.rpos = 0;
+            this.recv_cb(this.recv_buf);
         },
 
         jqRequest: function(client, postData, args, recv_method) {

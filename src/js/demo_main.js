@@ -1,34 +1,46 @@
+// works with google-crome --disable-web-security
 define(
     [// dependencies for the demo:
     // thrift-related
     "thrift", 
-    "socketio_transport",
+    "ajax_transport",
+    "json_protocol",
     // jquery for the ui stuff
-    "lib/jquery-1.6.2"], function(thrift, socketio_transport) {
-        window.Thrift = thrift;
+    "lib/jquery-1.6.2"], function(thrift, ajax_transport, json_protocol) {
         require.ready(function() {
             var genjs_files = ["./shared_types", "./SharedService", "./tutorial_types", "./Calculator"],
                 genjs_modules = {
                     'thrift': thrift
                 },
-                socket = new io.Socket(location.hostname),
+                show_ex = function(msg) {
+                    $('#result').val(msg);
+                    $('#result').css('color', 'red');
+                },
+                calc_cb = function(exception, result) {
+                    if (exception !== null) {
+                        show_ex(exception.why.value);
+                    } else {
+                        $('#result').val(result.value);
+                        $('#result').css('color', 'black');
+                    }
+                },
+                //socket = new io.Socket(location.hostname),
                 calc = function () {
-                    var transport = new Thrift.Transport("socket");
-                    var protocol  = new Thrift.Protocol(transport);
-                    var client    = new CalculatorClient(protocol);
-
-                    var work = new Work()
+                    var transport, client, recv_cb, work;
+                    recv_cb = function () {
+                        transport.recv(client);
+                    };
+                    transport = new ajax_transport.TAJAXTransport("http://localhost:8088/thrift/service/tutorial/", recv_cb);
+                    client = new CalculatorClient(transport, json_protocol.TJSONProtocol);
+                    work = new Work();
                     work.num1 = $("#num1").val();
                     work.num2 = $("#num2").val();
                     work.op = $("#op").val();
 
                     try {
-                        result = client.calculate(1, work);
-                        $('#result').val(result);
-                        $('#result').css('color', 'black');
+                        result = client.calculate(1, work, calc_cb);
                     } catch(ouch){
-                        $('#result').val(ouch.why);
-                        $('#result').css('color', 'red');
+                        show_ex(ouch.why);
                     }
                 },
                 auto_calc = function () {
@@ -105,19 +117,25 @@ define(
             real_require = window.require;
             window.require = fake_require;
 
-            load_all_genjs_files = function(file_list, module_store) {
+            load_all_genjs_files = function(file_list, module_store, on_ready) {
                 var current_file = file_list.shift(), module;
                 // If we have reached the end of the list, end the recursion.
                 if (current_file === undefined) {
                     globalize_modules(module_store);
-                    return init();
+                    window.require = real_require;
+                    console.log("finished loading generated .js files");
+                    return on_ready.apply(this, []);
                 }
                 load_genjs_file(current_file, function(module) {
                     merge(module, module_store);
-                    load_all_genjs_files(file_list, module_store);
+                    load_all_genjs_files(file_list, module_store, on_ready);
                 }); 
             };
-            load_all_genjs_files(genjs_files, genjs_modules);
+            load_all_genjs_files(genjs_files, genjs_modules, init);
+
+            //socket.on('connect', function() {
+            //    console.log("socket.io connectd, loading generated .js files");
+            //});
         });
 });
 /*

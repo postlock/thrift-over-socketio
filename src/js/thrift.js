@@ -51,7 +51,7 @@ define(function () {
       ONEWAY: 4,
     };
 
-    var TException = exports.TException = {};
+    var TException = exports.TException = function() {};
     TException.prototype = {
         initialize: function(message, code) {
             this.message = message;
