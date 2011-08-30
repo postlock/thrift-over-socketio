@@ -26,8 +26,11 @@ handle_event({disconnect, Pid}, State) ->
     {ok, State};
 handle_event({message, Client, #msg{ content = Content } = Msg}, State) ->
     io:format("Got a message: ~p from ~p~n",[Msg, Client]),
-    socketio_client:send(Client, #msg{ content = "hello!" }),
-    socketio_client:send(Client, #msg{ content = [{<<"echo">>, Content}], json = true}),
+    ProtoGen = fun() ->
+                       {ok, SocketioTransport} = thrift_socketio_transport:new(Client, list_to_binary(Content)),
+                       thrift_json_protocol:new(SocketioTransport)
+               end,
+    thrift_processor:init({self(), ProtoGen, calculator_thrift, server}),
     {ok, State};
 
 handle_event(E, State) ->

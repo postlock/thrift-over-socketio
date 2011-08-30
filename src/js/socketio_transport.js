@@ -22,7 +22,7 @@ define(function () {
      *This is how to use js bindings in a async fashion.
      */
     var exports = {}, TSocketioTransport;
-    TSocketioTransport = exports.TSocketioTransport = function(socket) {
+    TSocketioTransport = exports.TSocketioTransport = function(socket, recv_cb) {
         this.socket = socket;
         this.wpos = 0;
         this.rpos = 0;
@@ -30,16 +30,42 @@ define(function () {
         this.send_buf = '';
         this.recv_buf = '';
         // register recieve message callback fun
-        socket.on('message', function(data) {
+        this.socket.on('message', function(data) {
+            console.log(data);
             this.recv_buf = data;
+            recv_cb(data);
+        });
+        this.socket.on('connect', function(){
+            console.log("Imma connectad!");
+            console.log(socket);
         });
     };
 
     TSocketioTransport.prototype = {
 
         flush: function() {
-            return this.send_buf;
+            return this.socket.send(this.send_buf);
         },
+
+        recv: function (client) {
+            var message = new client.pClass(this);
+            try {
+                var header = message.readMessageBegin();
+                /*
+                client._reqs[dummy_seqid] = function(err, success){
+                    transport_with_data.commitPosition();
+                    var callback = client._reqs[header.rseqid];
+                    delete client._reqs[header.rseqid];
+                    if (callback) {
+                        callback(err, success);
+                    }
+                };*/
+                client['recv_' + header.fname].apply(client, [message, header.mtype, header.rseqid]);
+            } catch (e) {
+                console.log(e.stack);
+            }
+        },
+
 
         isOpen: function() {
             return true;
@@ -75,7 +101,6 @@ define(function () {
 
         write: function(buf) {
             this.send_buf = buf;
-            this.socket.send(this.send_buf);
         },
 
         getSendBuffer: function() {

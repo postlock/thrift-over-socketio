@@ -4,10 +4,10 @@ define(
     [// dependencies for the demo:
     // thrift-related
     "thrift", 
-    "socketio_transport",
+    "ajax_transport",
     "json_protocol",
     // jquery for the ui stuff
-    "lib/jquery-1.6.2"], function(thrift, socketio_transport, json_protocol) {
+    "lib/jquery-1.6.2"], function(thrift, ajax_transport, json_protocol) {
         require.ready(function() {
             var genjs_files = ["./shared_types", "./SharedService", "./tutorial_types", "./Calculator"],
                 genjs_modules = {
@@ -25,14 +25,14 @@ define(
                         $('#result').css('color', 'black');
                     }
                 },
-                transport,
-                client,
-                recv_cb = function () {
-                    transport.recv(client);
-                },
-                socket = new io.Socket(location.hostname),
+                //socket = new io.Socket(location.hostname),
                 calc = function () {
-                    var work;
+                    var transport, client, recv_cb, work;
+                    recv_cb = function () {
+                        transport.recv(client);
+                    };
+                    transport = new ajax_transport.TAJAXTransport("http://localhost:8088/thrift/service/tutorial/", recv_cb);
+                    client = new CalculatorClient(transport, json_protocol.TJSONProtocol);
                     work = new Work();
                     work.num1 = $("#num1").val();
                     work.num2 = $("#num2").val();
@@ -60,9 +60,6 @@ define(
                     $('#op').keyup(auto_calc);
                     $('#num2').keyup(auto_calc);
                     $('#calculate').click(calc);
-                    transport = new socketio_transport.TSocketioTransport(socket, recv_cb);
-                    client = new CalculatorClient(transport, json_protocol.TJSONProtocol);
-                    socket.connect();
                 },
                 // ---- library functions below ----
                 merge = function (src, dest) {
