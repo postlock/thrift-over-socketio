@@ -100,7 +100,8 @@ flush_transport(This = #json_protocol{transport = Transport}) ->
     {NewTransport, Result} = thrift_transport:flush(Transport),
     {This#json_protocol{
             transport = NewTransport,
-            context_stack = []
+            context_stack = [],
+            jsx = undefined
         }, Result}.
 
 close_transport(This = #json_protocol{transport = Transport}) ->
@@ -331,9 +332,15 @@ write_values(This0, ValueList) ->
 read_all(#json_protocol{transport = Transport0} = State) ->
     {Transport1, Bin} = read_all_1(Transport0, []),
     P = jsx:decoder(),
+    Jsx = case Bin of
+        <<>> ->
+            undefined;
+        _ ->
+            P(Bin)
+    end,
     State#json_protocol{
         transport = Transport1,
-        jsx = P(Bin)
+        jsx = Jsx 
     }.
 
 read_all_1(Transport0, IoList) ->
@@ -396,19 +403,24 @@ read_field(#json_protocol{jsx={event, Field, Next}} = State) ->
 
 read(This0, message_begin) ->
     % call read_all to get the contents of the transport buffer into JSX.
-    This1 = read_all(This0),
-    case expect_many(This1, 
-            [start_array, integer, string, integer, integer]) of
-        {This2, {ok, [_, Version, Name, Type, SeqId]}} ->
-            case Version =:= ?VERSION_1 of
-                true ->
-                    {This2, #protocol_message_begin{name  = Name,
-                                                    type  = Type,
-                                                    seqid = SeqId}};
-                false ->
-                    {This2, {error, no_json_protocol_version}}
-            end;
-        Other -> Other
+    #json_protocol{jsx=Jsx} = This1 = read_all(This0),
+    case Jsx of
+        undefined -> 
+            {This1, {error, timeout}};
+        _ ->
+            case expect_many(This1, 
+                    [start_array, integer, string, integer, integer]) of
+                {This2, {ok, [_, Version, Name, Type, SeqId]}} ->
+                    case Version =:= ?VERSION_1 of
+                        true ->
+                            {This2, #protocol_message_begin{name  = Name,
+                                                            type  = Type,
+                                                            seqid = SeqId}};
+                        false ->
+                            {This2, {error, no_json_protocol_version}}
+                    end;
+                Other -> Other
+            end
     end;
 
 read(This, message_end) -> 

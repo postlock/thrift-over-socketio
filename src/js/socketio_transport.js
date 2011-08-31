@@ -23,6 +23,7 @@ define(function () {
      */
     var exports = {}, TSocketioTransport;
     TSocketioTransport = exports.TSocketioTransport = function(socket, recv_cb) {
+        var transport_obj = this;
         this.socket = socket;
         this.wpos = 0;
         this.rpos = 0;
@@ -31,8 +32,7 @@ define(function () {
         this.recv_buf = '';
         // register recieve message callback fun
         this.socket.on('message', function(data) {
-            console.log(data);
-            this.recv_buf = data;
+            transport_obj.recv_buf = data;
             recv_cb(data);
         });
         this.socket.on('connect', function(){

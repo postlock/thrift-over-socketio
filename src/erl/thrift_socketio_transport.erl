@@ -63,9 +63,10 @@ read(This = #data{content=Content}, Len) ->
 
 %% We can't really flush - everything is flushed when we write
 flush(This = #data{client_pid = ClientPid, content = Content}) ->
-    {This,  socketio_client:send(ClientPid, #msg{ content = binary_to_list(iolist_to_binary(lists:reverse(Content)))})}.
+    {This#data{content = <<>> },  socketio_client:send(ClientPid, #msg{ content = binary_to_list(iolist_to_binary(lists:reverse(Content)))})}.
 
 %% Cant really close - maybe disconnect?
 close(This) ->
+    io:format("thrift_socketio_transport:close called~n", []),
     {This, ok}.
 
