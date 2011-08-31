@@ -19,7 +19,12 @@ define(
                 },
                 calc_cb = function(exception, result) {
                     if (exception !== null) {
-                        show_ex(exception.why.value);
+                        if (exception.why && exception.why.value) {
+                            show_ex(exception.why.value);
+                        }
+                        if (exception.message && exception.message.value) {
+                            show_ex(exception.message.value);
+                        }
                     } else {
                         $('#result').val(result.value);
                         $('#result').css('color', 'black');
