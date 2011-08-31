@@ -35,6 +35,10 @@ define(['thrift'], function (Thrift) {
 
     TJSONProtocol.prototype = {
 
+        flush: function() {
+            return this.transport.flush();
+        },
+
         getTransport: function() {
             return this.transport;
         },

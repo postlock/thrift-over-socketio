@@ -22,7 +22,7 @@
 
 -behaviour(thrift_transport).
 
--export([new/2,
+-export([new/1, new/2,
          write/2, read/2, flush/1, close/1]).
 
 -record(data, {client_pid,
@@ -31,6 +31,8 @@
 -type state() :: #data{}.
 -include("thrift_transport_behaviour.hrl").
 
+new(ClientPid) ->
+    new(ClientPid, <<>> ).
 new(ClientPid, Content) ->
     State = #data{
         client_pid = ClientPid,

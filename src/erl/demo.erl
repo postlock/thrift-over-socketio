@@ -1,5 +1,6 @@
 -module(demo).
 -include_lib("../include/socketio.hrl").
+-include("calculator_thrift.hrl").
 -compile(export_all).
 -behaviour(gen_event).
 
@@ -80,3 +81,54 @@ handle_request('GET', [Resource|File]=Path, Req) ->
     end;
 handle_request(_Method, _Path, Req) ->
     Req:respond(200).
+
+new_client(Pid, Service, _Options) ->
+    {ProtoOpts, TransOpts} = {[],[]},
+    TransportFactory = fun() -> thrift_socketio_transport:new(Pid, TransOpts) end,
+    {ok, ProtocolFactory} = thrift_json_protocol:new_protocol_factory(
+                              TransportFactory, ProtoOpts),
+    {ok, Protocol} = ProtocolFactory(),
+    thrift_client:new(Protocol, Service).
+
+t(Pid) ->
+    {ok, Client0} = new_client(Pid, calculator_thrift, []),
+    {Client1, {ok, ok}} = thrift_client:call(Client0, ping, []),
+    io:format("ping~n", []),
+
+    {Client2, {ok, Sum}} = thrift_client:call(Client1, add,  [1, 1]),
+    io:format("1+1=~p~n", [Sum]),
+
+    {Client3, {ok, Sum1}} = thrift_client:call(Client2, add, [1, 4]),
+    io:format("1+4=~p~n", [Sum1]),
+
+    Work = #work{op=?tutorial_Operation_SUBTRACT,
+                 num1=15,
+                 num2=10},
+    {Client4, {ok, Diff}} = thrift_client:call(Client3, calculate, [1, Work]),
+    io:format("15-10=~p~n", [Diff]),
+
+    {Client5, {ok, Log}} = thrift_client:call(Client4, getStruct, [1]),
+    io:format("Log: ~p~n", [Log]),
+
+    Client6 =
+        try
+            Work1 = #work{op=?tutorial_Operation_DIVIDE,
+                          num1=1,
+                          num2=0},
+            {ClientS1, {ok, _Quot}} = thrift_client:call(Client5, calculate, [2, Work1]),
+
+            io:format("LAME: exception handling is broken~n", []),
+            ClientS1
+        catch
+            throw:{ClientS2, Z} ->
+                io:format("Got exception where expecting - the " ++
+                          "following is NOT a problem!!!~n~p~n", [Z]),
+                ClientS2
+        end,
+
+
+    {Client7, {ok, ok}} = thrift_client:call(Client6, zip, []),
+    io:format("zip~n", []),
+
+    {_Client8, ok} = thrift_client:close(Client7),
+    ok.

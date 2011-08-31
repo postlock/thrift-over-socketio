@@ -13,6 +13,10 @@ define(
                 genjs_modules = {
                     'thrift': thrift
                 },
+                stub = function() {
+                    console.dir(arguments);
+                    return true;
+                },
                 show_ex = function(msg) {
                     $('#result').val(msg);
                     $('#result').css('color', 'red');
@@ -32,6 +36,7 @@ define(
                 },
                 transport,
                 client,
+                server,
                 recv_cb = function () {
                     transport.recv(client);
                 },
@@ -65,7 +70,13 @@ define(
                     $('#op').keyup(auto_calc);
                     $('#num2').keyup(auto_calc);
                     $('#calculate').click(calc);
-                    transport = new socketio_transport.TSocketioTransport(socket, recv_cb);
+                    server = new CalculatorProcessor({
+                        ping: function (success) {
+                            console.log('PING called by webserver');
+                            success(true);
+                        }
+                    });
+                    transport = new socketio_transport.TSocketioTransport(socket, recv_cb, server);
                     client = new CalculatorClient(transport, json_protocol.TJSONProtocol);
                     socket.connect();
                 },

@@ -22,8 +22,9 @@ define(function () {
      *This is how to use js bindings in a async fashion.
      */
     var exports = {}, TSocketioTransport;
-    TSocketioTransport = exports.TSocketioTransport = function(socket, recv_cb) {
+    TSocketioTransport = exports.TSocketioTransport = function(socket, recv_cb, server) {
         var transport_obj = this;
+        this.server = server;
         this.socket = socket;
         this.wpos = 0;
         this.rpos = 0;
@@ -32,11 +33,11 @@ define(function () {
         this.recv_buf = '';
         // register recieve message callback fun
         this.socket.on('message', function(data) {
+            console.log(data);
             transport_obj.recv_buf = data;
             recv_cb(data);
         });
         this.socket.on('connect', function(){
-            console.log("Imma connectad!");
             console.log(socket);
         });
     };
@@ -44,7 +45,9 @@ define(function () {
     TSocketioTransport.prototype = {
 
         flush: function() {
-            return this.socket.send(this.send_buf);
+            var res = this.socket.send(this.send_buf);
+            this.send_buf = "";
+            return res;
         },
 
         recv: function (client) {
@@ -60,7 +63,12 @@ define(function () {
                         callback(err, success);
                     }
                 };*/
-                client['recv_' + header.fname].apply(client, [message, header.mtype, header.rseqid]);
+                if (header.mtype === Thrift.MessageType.CALL) {
+                    // HACK: the tranport class should not be hardcoded to use the JSON protocol.
+                    this.server.process(message, message);
+                } else {
+                    client['recv_' + header.fname].apply(client, [message, header.mtype, header.rseqid]);
+                }
             } catch (e) {
                 console.log(e.stack);
             }
@@ -100,7 +108,7 @@ define(function () {
         },
 
         write: function(buf) {
-            this.send_buf = buf;
+            this.send_buf = this.send_buf + buf;
         },
 
         getSendBuffer: function() {
@@ -108,17 +116,5 @@ define(function () {
         }
 
     };
-    SocketioServer = exports.SocketioServer = function(on_message_fun) {
-        this.socketio_conn = undefined;
-        this.on_message_fun = on_message_fun;
-    };
-    SocketioServer.prototype.listen = function(socketio_conn) {
-        this.socketio_conn = socketio_conn;
-        this.socketio_conn.on('message', this.on_message_fun);
-    };
-    SocketioServer.prototype.receive_event_name = function() {
-        return "message";
-    };
-
     return exports;
 }); // end define
