@@ -3,6 +3,10 @@
 -include("calculator_thrift.hrl").
 -compile(export_all).
 -behaviour(gen_event).
+-record(state, {
+          % tree containing pending requests
+          pending_requests = gb_trees:empty()
+          }).
 
 main() ->
     application:start(sasl),
@@ -18,21 +22,16 @@ init([]) ->
     {ok, undefined}.
 
 handle_event({client, Pid}, State) ->
-    io:format("Connected: ~p~n",[Pid]),
+    io:format("Connected: ~p (self is ~p)~n ",[Pid, self()]),
     EventMgr = socketio_client:event_manager(Pid),
-    ok = gen_event:add_handler(EventMgr, ?MODULE,[]),
+    %ok = gen_event:add_handler(EventMgr, ?MODULE,[]),
+    ok = gen_event:add_handler(EventMgr, socketio_thrift_shim,[Pid, calculator_thrift, server]),
     {ok, State};
 handle_event({disconnect, Pid}, State) ->
     io:format("Disconnected: ~p~n",[Pid]),
     {ok, State};
-handle_event({message, Client, #msg{ content = Content } = Msg}, State) ->
-    io:format("Got a message: ~p from ~p~n",[Msg, Client]),
-    ProtoGen = fun() ->
-                       {ok, SocketioTransport} = thrift_socketio_transport:new(Client, list_to_binary(Content)),
-                       thrift_json_protocol:new(SocketioTransport)
-               end,
-    thrift_processor:init({self(), ProtoGen, calculator_thrift, server}),
-    {ok, State};
+%handle_event({message, Client, #msg{ content = Content } = Msg}, State) ->
+%    {ok, State};
 
 handle_event(E, State) ->
     {ok, State}.

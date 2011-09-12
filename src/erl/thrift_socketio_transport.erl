@@ -25,17 +25,17 @@
 -export([new/1, new/2,
          write/2, read/2, flush/1, close/1]).
 
--record(data, {client_pid,
+-record(data, {shim_pid,
                content,
                recv_timeout=infinity}).
 -type state() :: #data{}.
 -include("thrift_transport_behaviour.hrl").
-
+-define(TIMEOUT, 10000).
 new(ClientPid) ->
-    new(ClientPid, <<>> ).
+    new(ClientPid, undefined).
 new(ClientPid, Content) ->
     State = #data{
-        client_pid = ClientPid,
+        shim_pid = ClientPid,
         content = Content
     },
     thrift_transport:new(?MODULE, State).
@@ -52,6 +52,23 @@ write(This = #data{content = Content}, Data) ->
         ok
     }.
 
+read(This = #data{content = undefined}, Len) ->
+    % We are trying to read data that isn't here yet.
+    % By sending out the request, socketio_thrift_shim knows its time to call us when the response arrives
+    % so we wait for a while, then inform the shim that we've timed out.
+    receive
+        {reply, Content} ->
+            read(This#data{content=Content}, Len);
+        Other ->
+            io:format("got unexpected ~p in reply ~n", [Other])
+    after ?TIMEOUT ->
+        % TODO: inform shim that we're not waiting any more
+        % TODO: we shouldn't return anything (since thrift_client cant handle errors),
+        % instead, we should throw an exception.
+        {This, {error, 'EOF'}}
+    end;
+
+
 read(This = #data{content = <<>>}, _Len) ->
     {This, {error, 'EOF'}};
 
@@ -63,9 +80,11 @@ read(This = #data{content=Content}, Len) ->
         {ok, Read}
     }.
 
-%% We can't really flush - everything is flushed when we write
-flush(This = #data{client_pid = ClientPid, content = Content}) ->
-    {This#data{content = <<>> },  socketio_client:send(ClientPid, #msg{ content = binary_to_list(iolist_to_binary(lists:reverse(Content)))})}.
+flush(This = #data{shim_pid = Pid, content = Content}) ->
+    io:format("**** before suspected crash stat is ~p~n", [This]),
+    gen_event:notify(Pid, {send, iolist_to_binary(lists:reverse(Content)), self()}),
+    io:format("**** after suspected crash~n", []),
+    {This, ok}.
 
 %% Cant really close - maybe disconnect?
 close(This) ->
