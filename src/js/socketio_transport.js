@@ -39,6 +39,8 @@ define(function () {
         });
         this.socket.on('connect', function(){
             console.log(socket);
+            // I tried, and service composition does work in the erlang server
+            // socket.send('[1,"getStruct",1,4,{"1":{"i32":1}}]');
         });
     };
 
@@ -51,9 +53,9 @@ define(function () {
         },
 
         recv: function (client) {
-            var message = new client.pClass(this);
+            var header, proto = new client.pClass(this);
             try {
-                var header = message.readMessageBegin();
+                header = proto.readMessageBegin();
                 /*
                 client._reqs[dummy_seqid] = function(err, success){
                     transport_with_data.commitPosition();
@@ -64,13 +66,20 @@ define(function () {
                     }
                 };*/
                 if (header.mtype === Thrift.MessageType.CALL) {
-                    // HACK: the tranport class should not be hardcoded to use the JSON protocol.
-                    this.server.process(message, message);
+                    this.server.process(proto, proto);
                 } else {
-                    client['recv_' + header.fname].apply(client, [message, header.mtype, header.rseqid]);
+                    client['recv_' + header.fname].apply(client, [proto, header.mtype, header.rseqid]);
                 }
             } catch (e) {
-                console.log(e.stack);
+                var ex = e;
+                if (!(ex instanceof TException)) {
+                    ex = new Thrift.TApplicationException(Thrift.TApplicationExceptionType.UNKNOWN, 'An unknown error occured');
+                } 
+                // note that this assumes MessageBegin was successfully parsed
+                proto.writeMessageBegin(header.fname, Thrift.MessageType.EXCEPTION, header.rseqid);
+                ex.write(proto);
+                proto.writeMessageEnd();
+                proto.flush();
             }
         },
 

@@ -1,5 +1,5 @@
 ## COMPILING THE DEMO
-erlc  +debug +debug_info -I ~/git/socket.io-erlang/include -I ~/git/thrift/lib/erl/include -pa ~/git/socket.io-erlang/ebin/ -o ~/git/thrift-over-socketio/ebin *.erl
+erlc  +debug +debug_info -I ~/git/socket.io-erlang/include -I ~/git/thrift/lib/erl/include -I ~/git/thrift-over-socketio/gen/erl/ -pa ~/git/socket.io-erlang/ebin/ -o ~/git/thrift-over-socketio/ebin *.erl
 ~/opt/bin/thrift -r -out /home/postlock/git/thrift-over-socketio/gen/erl --gen erl /home/postlock/git/thrift-over-socketio/src/thrift/tutorial.thrift
 erlc -pa ~/git/thrift/lib/erl/ebin -o ~/git/thrift-over-socketio/ebin ~/git/thrift-over-socketio/gen/erl/*.erl
 

@@ -22,25 +22,29 @@
 
 -behaviour(thrift_transport).
 
--export([new/1, new/2,
+-export([new/1, new/3,
          write/2, read/2, flush/1, close/1]).
 
 -record(data, {shim_pid,
                content,
+               expect_reply,
                recv_timeout=infinity}).
 -type state() :: #data{}.
 -include("thrift_transport_behaviour.hrl").
 -define(TIMEOUT, 10000).
 new(ClientPid) ->
-    new(ClientPid, undefined).
-new(ClientPid, Content) ->
+    new(ClientPid, undefined, true).
+new(ClientPid, Content, ExpectReply) ->
     State = #data{
         shim_pid = ClientPid,
+        expect_reply = ExpectReply,
         content = Content
     },
     thrift_transport:new(?MODULE, State).
 
 %% Data :: iolist()
+write(This = #data{content = undefined}, Data) ->
+    write(This#data{content = <<>>}, Data);
 write(This = #data{content = <<>>}, Data) ->
     {
         This#data{content=[Data]}, 
@@ -58,6 +62,7 @@ read(This = #data{content = undefined}, Len) ->
     % so we wait for a while, then inform the shim that we've timed out.
     receive
         {reply, Content} ->
+            io:format("got reply which we waited on: ~p~n", [Content]),
             read(This#data{content=Content}, Len);
         Other ->
             io:format("got unexpected ~p in reply ~n", [Other])
@@ -69,8 +74,15 @@ read(This = #data{content = undefined}, Len) ->
     end;
 
 
-read(This = #data{content = <<>>}, _Len) ->
-    {This, {error, 'EOF'}};
+read(This = #data{content = <<>>, expect_reply = ExpectReply}, _Len) ->
+    {This#data{
+        content = case ExpectReply of
+            true -> 
+                undefined;
+            false ->
+                <<>>
+        end
+    }, {error, 'EOF'}};
 
 %% TODO: handle the case where Len > length of remaining binary
 read(This = #data{content=Content}, Len) ->
@@ -80,14 +92,21 @@ read(This = #data{content=Content}, Len) ->
         {ok, Read}
     }.
 
-flush(This = #data{shim_pid = Pid, content = Content}) ->
-    io:format("**** before suspected crash stat is ~p~n", [This]),
+flush(This = #data{shim_pid = Pid, content = Content, expect_reply = ExpectReply}) ->
     gen_event:notify(Pid, {send, iolist_to_binary(lists:reverse(Content)), self()}),
-    io:format("**** after suspected crash~n", []),
-    {This, ok}.
+    % we set content to undefined so if there is a read after this flush,
+    % we will wait for the response to our request.
+    {This#data{
+        content = case ExpectReply of
+            true -> 
+                undefined;
+            false ->
+                <<>>
+        end
+    }, ok}.
 
 %% Cant really close - maybe disconnect?
 close(This) ->
     io:format("thrift_socketio_transport:close called~n", []),
-    {This, ok}.
+    {This#data{content = undefined}, ok}.
 

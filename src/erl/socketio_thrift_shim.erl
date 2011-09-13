@@ -21,14 +21,13 @@ init([ClientPid, Service, Handler]) ->
         pending = gb_trees:empty()
     }}.
 
-handle_event({message, ClientA, #msg{ content = ListContent } = Msg}, 
+handle_event({message, _Client, #msg{ content = ListContent } = Msg}, 
         #state{
             service=Service,
-            handler=Handler,
-            client=ClientB
+            handler=Handler
         }=State) ->
     Content = list_to_binary(ListContent),
-    io:format("socketio_read_queue got a message: ~p from ~p==~p (self is ~p)~n",[Msg, ClientA, ClientB, self()]),
+    io:format("socketio_thrift_shim received message: ~p (self is ~p)~n",[Msg, self()]),
     #protocol_message_begin{
         type = Type,
         seqid = Seqid} = get_message_begin(Content),
@@ -68,25 +67,24 @@ handle_event({send, Content, SenderPid}, #state{
     {ok, State1}.
 
 get_message_begin(Message) ->
-    {ok, Transport} = thrift_socketio_transport:new(undefined, Message),
+    {ok, Transport} = thrift_socketio_transport:new(undefined, Message, false),
     {ok, Proto0} = thrift_json_protocol:new(Transport), 
     {_Proto1, MessageBegin} = thrift_protocol:read(Proto0, message_begin),
-    io:format("MessageBegin is ~p~n", [MessageBegin]),
     MessageBegin.
 
 process_incoming(Message, Service, Handler) ->
     % TODO: this should be happending in a separate process, which we should be linked to if it crashes.
     ProtoGen = fun() ->
-        {ok, Transport} = thrift_socketio_transport:new(self(), Message),
+        {ok, Transport} = thrift_socketio_transport:new(self(), Message, false),
         thrift_json_protocol:new(Transport)
     end,
     thrift_processor:init({undefined, ProtoGen, Service, Handler}).
 
-forward_reply(Content, Seqid, #state{pending=Pending} = State) ->
+forward_reply(ReplyContent, Seqid, #state{pending=Pending} = State) ->
     % we're assuming a request was made with this seqid
-    {SenderPid, Content} = gb_trees:get(Seqid, Pending),
+    {SenderPid, _ReqContent} = gb_trees:get(Seqid, Pending),
     % TODO: remove from Pending
-    SenderPid ! {reply, Content},
+    SenderPid ! {reply, ReplyContent},
     State.
     
 do_send(ClientPid, Content) -> 

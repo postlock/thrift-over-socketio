@@ -83,7 +83,7 @@ handle_request(_Method, _Path, Req) ->
 
 new_client(Pid, Service, _Options) ->
     {ProtoOpts, TransOpts} = {[],[]},
-    TransportFactory = fun() -> thrift_socketio_transport:new(Pid, TransOpts) end,
+    TransportFactory = fun() -> thrift_socketio_transport:new(Pid, <<>>, true) end,
     {ok, ProtocolFactory} = thrift_json_protocol:new_protocol_factory(
                               TransportFactory, ProtoOpts),
     {ok, Protocol} = ProtocolFactory(),

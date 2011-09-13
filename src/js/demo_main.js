@@ -60,6 +60,64 @@ define(
                     }
                 },
                 init = function() {
+                    var i, fn_list = [], op_fn = {
+                        ping: function (success) {
+                            console.log('PING called by webserver');
+                            success(true);
+                        },
+                        add: function (a, b, success) {
+                            console.log('ADD called by webserver');
+                            success(a.value + b.value);
+                        },
+                        subtract: function (a, b, success) {
+                            console.log('SUBTRACT called by webserver');
+                            success(a.value - b.value);
+                        },
+                        multiply: function (a, b, success) {
+                            console.log('MULTIPLY called by webserver');
+                            success(a.value * b.value);
+                        },
+                        divide: function (a, b, success) {
+                            var result = a.value / b.value;
+                            console.log('DIVIDE called by webserver');
+                            if (!isFinite(result)) {
+                                console.log('division results in non-finite number');
+                                throw new ttypes.InvalidOperation({
+                                    what: arguments[3] || 0,
+                                    why: "division by zero"
+                                });
+                            }
+                            success(result);
+                        },
+                        calculate: function (op_id, work, success) {
+                            var fn = fn_list[work.op.value].fn;
+                            console.log('CALCULATE called by webserver');
+                            fn.apply(this, [work.num1, work.num2, success, op_id.value]);
+                            //success(a.value + b.value);
+                        },
+                        getStruct: function (id, success) {
+                            var struct = new shared_ttypes.SharedStruct({
+                                key: 0,
+                                value: "RARG"
+                            });
+                            console.log('GETSTRUCT called by webserver');
+                            success(struct);
+                        },
+                    };
+                    // init fn_list
+                    for (i in ttypes.Operation) {
+                        if (ttypes.Operation.hasOwnProperty(i)) {
+                            fn_list.push({
+                                name: i.toLowerCase(),
+                                id: ttypes.Operation[i],
+                                fn: op_fn[i.toLowerCase()]
+                            });
+                        }
+                    }
+                    fn_list.sort(function(a, b) {return a.id - b.id;});
+                    // prepend an element because operations start from 1:
+                    fn_list.unshift(0);
+
                     $("#op").children().remove();
                     // add operations to it's dropdown menu
                     $.each(Operation, function(key, value) {
@@ -70,20 +128,28 @@ define(
                     $('#op').keyup(auto_calc);
                     $('#num2').keyup(auto_calc);
                     $('#calculate').click(calc);
-                    server = new CalculatorProcessor({
-                        ping: function (success) {
-                            console.log('PING called by webserver');
-                            success(true);
-                        }
-                    });
+                    // unfortunately, the generated js code does not properly inherit parent services
+                    // we have to fix this implicitly
+                    inherit_service(CalculatorProcessor, SharedServiceProcessor);
+                    server = new CalculatorProcessor(op_fn);
                     transport = new socketio_transport.TSocketioTransport(socket, recv_cb, server);
                     client = new CalculatorClient(transport, json_protocol.TJSONProtocol);
                     socket.connect();
                 },
                 // ---- library functions below ----
-                merge = function (src, dest) {
+                inherit_service = function (ChildCons, ParentCons) {
+                    merge(ParentCons.prototype, ChildCons.prototype);
+                }, 
+                merge = function (src, dest, override) {
                     var i;
-                    for (i in src) if (src.hasOwnProperty(i)) dest[i] = src[i];
+                    for (i in src) {
+                        if (src.hasOwnProperty(i)) {
+                            if (dest.hasOwnProperty(i) && (override !== true)) {
+                                continue;
+                            }
+                            dest[i] = src[i];
+                        }
+                    }
                     return dest;
                 },
                 get_module_name = function(filename) {
