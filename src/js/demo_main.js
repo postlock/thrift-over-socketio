@@ -1,5 +1,3 @@
-// For the connection URL, use the one which points to the java server written for the official javascript tutorial.
-// Serving files and AJAX requests on different ports works with google-crome --disable-web-security
 define(
     [// dependencies for the demo:
     // thrift-related
@@ -78,7 +76,7 @@ define(
                             success(a.value * b.value);
                         },
                         divide: function (a, b, success) {
-                            var result = a.value / b.value;
+                            var ex, result = a.value / b.value;
                             console.log('DIVIDE called by webserver');
                             if (!isFinite(result)) {
                                 console.log('division results in non-finite number');
@@ -129,7 +127,7 @@ define(
                     $('#num2').keyup(auto_calc);
                     $('#calculate').click(calc);
                     // unfortunately, the generated js code does not properly inherit parent services
-                    // we have to fix this implicitly
+                    // we have to fix this by explicitly inheriting
                     inherit_service(CalculatorProcessor, SharedServiceProcessor);
                     server = new CalculatorProcessor(op_fn);
                     transport = new socketio_transport.TSocketioTransport(socket, recv_cb, server);
