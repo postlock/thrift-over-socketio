@@ -73,15 +73,22 @@ define(function () {
             } catch (e) {
                 var ex = e;
                 if (!(ex instanceof TException)) {
-                    ex = new Thrift.TApplicationException(Thrift.TApplicationExceptionType.UNKNOWN, 'An unknown error occured');
+                    ex = new Thrift.TApplicationException(Thrift.TApplicationExceptionType.UNKNOWN, '');
+                    ex.message = e.toString();
                 }
-                if ((ex instanceof TException) && (ex.constructor !== TException)) { // this was a custom exception
+                if (ex.name && (ex.name !== 'TApplicationException')) { // this was a custom exception
                     proto.writeMessageBegin(header.fname, Thrift.MessageType.REPLY, header.rseqid);
+                    proto.writeStructBegin();
+                    // Note that "1" will not necessarily be valid if the function can throw several types of exceptions!
+                    proto.writeFieldBegin(undefined, Thrift.Type.STRUCT, 1);
+                    ex.write(proto);
+                    proto.writeFieldEnd();
+                    proto.writeStructEnd();
                 } else {
                     // note that this assumes MessageBegin was successfully parsed
                     proto.writeMessageBegin(header.fname, Thrift.MessageType.EXCEPTION, header.rseqid);
+                    ex.write(proto);
                 }
-                ex.write(proto);
                 proto.writeMessageEnd();
                 proto.flush();
             }

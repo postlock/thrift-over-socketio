@@ -1,0 +1,12 @@
+A couple of bugs in thrift:
+
+Erlang lib 
+----------
+- doesn't increment seqid (thrift_client.erl).
+- one-way function calls are sent with the CALL message type instead of ONEWAY (thrift_client.erl).
+
+Javascript generated
+--------------------
+- Exceptions need an extra "beginstruct, beginfield" around them.
+- Exceptions: no way to tell what fieldid they should have!
+- Generated server does not inherit as it should (must be fixed explicitly).

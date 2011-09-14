@@ -85,7 +85,7 @@ forward_reply(ReplyContent, Seqid, #state{pending=Pending} = State) ->
     {SenderPid, _ReqContent} = gb_trees:get(Seqid, Pending),
     % TODO: remove from Pending
     SenderPid ! {reply, ReplyContent},
-    State.
+    State#state{pending = gb_trees:delete(Seqid, Pending)}.
     
 do_send(ClientPid, Content) -> 
     socketio_client:send(ClientPid, #msg{ content = binary_to_list(Content)}).
