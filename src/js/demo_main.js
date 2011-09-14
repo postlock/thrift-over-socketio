@@ -101,6 +101,9 @@ define(
                             console.log('GETSTRUCT called by webserver');
                             success(struct);
                         },
+                        zip: function () {
+                            console.log('ZIP called by webserver');
+                        }
                     };
                     // init fn_list
                     for (i in ttypes.Operation) {
