@@ -5,7 +5,7 @@ erlc -pa ~/git/thrift/lib/erl/ebin -o ~/git/thrift-over-socketio/ebin ~/git/thri
 
 ## RUNNING THE DEMO
 erl -pa ~/git/thrift/lib/erl/ebin -pa ~/git/socket.io-erlang/deps/jsx/ebin -pa \
-~/git/socket.io-erlang/deps/misultin/ebin/ -pa ~/git/socket.io-erlang/n -pa  ~/git/thrift-over-socketio/ebin -pa \
+~/git/socket.io-erlang/deps/misultin/ebin/ -pa ~/git/socket.io-erlang/ebin -pa  ~/git/thrift-over-socketio/ebin -pa \
 ~/git/thrift/tutorial/erl/ebin/
 
 ## TRACING WITH REDBUG

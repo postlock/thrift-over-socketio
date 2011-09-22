@@ -48,12 +48,8 @@ terminate(_Reason, State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 %%
-resource_to_dir("js") -> "/home/postlock/git/thrift-over-socketio/src/js/";
-resource_to_dir("genjs") -> "/home/postlock/git/thrift-over-socketio/gen/js/";
-resource_to_dir("shared_types.js") -> "/home/postlock/git/thrift-over-socketio/gen/js/shared_types.js";
-resource_to_dir("tutorial_types.js") -> "/home/postlock/git/thrift-over-socketio/gen/js/tutorial_types.js";
-resource_to_dir("Calculator.js") -> "/home/postlock/git/thrift-over-socketio/gen/js/Calculator.js";
-resource_to_dir("SharedService.js") -> "/home/postlock/git/thrift-over-socketio/gen/js/SharedService.js";
+resource_to_dir(["js", "gen" | Rest]) -> ["/home/postlock/git/thrift-over-socketio/gen/js/"|Rest];
+resource_to_dir(["js" | Rest]) -> ["/home/postlock/git/thrift-over-socketio/src/js/"|Rest];
 
 resource_to_dir(_) -> none.
 handle_request('GET', [], Req) ->
@@ -68,13 +64,13 @@ handle_request('GET', [File]=Path, Req) ->
             Req:file(F)
     end;
 
-handle_request('GET', [Resource|File]=Path, Req) ->
-    case resource_to_dir(Resource) of
+handle_request('GET', Path, Req) ->
+    case resource_to_dir(Path) of
         none -> 
             io:format("**** file not found ~p~n", [Path]),
             Req:respond(200); % should be 404 actually, but whatever
         Dir ->
-            FullPath = Dir ++ string:join(File, "/"),
+            FullPath = string:join(Dir, "/"),
             io:format("**** serving file ~p~n", [FullPath]),
             Req:file(FullPath)
     end;

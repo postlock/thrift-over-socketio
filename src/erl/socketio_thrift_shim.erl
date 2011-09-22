@@ -21,13 +21,13 @@ init([ClientPid, Service, Handler]) ->
         pending = gb_trees:empty()
     }}.
 
-handle_event({message, _Client, #msg{ content = ListContent } = Msg}, 
+handle_event({message, _Client, #msg{ content = ListContent }}, 
         #state{
             service=Service,
             handler=Handler
         }=State) ->
     Content = list_to_binary(ListContent),
-    io:format("socketio_thrift_shim received message: ~p (self is ~p)~n",[Msg, self()]),
+    %io:format("socketio_thrift_shim received message: ~p (self is ~p)~n",[Msg, self()]),
     #protocol_message_begin{
         type = Type,
         seqid = Seqid} = get_message_begin(Content),
@@ -50,14 +50,21 @@ handle_event({message, _Client, #msg{ content = ListContent } = Msg},
     {ok, State1};
 
 handle_event({send, Content, SenderPid}, #state{
-            client=ClientPid
+            client=ClientPid,
+            service=Service
         }=State) ->
-    io:format("sending message: ~p on behalf of ~p~n",[Content, SenderPid]),
+    %io:format("sending message: ~p on behalf of ~p~n",[Content, SenderPid]),
     #protocol_message_begin{
         type = Type,
+        name = Name,
         seqid = Seqid} = get_message_begin(Content),
-    State1 = case Type of 
-        ?tMessageType_CALL ->
+    ReturnType = Service:function_info(list_to_atom(Name), reply_type),
+    State1 = case {Type, ReturnType} of 
+        % This has to be a separate case because thrift_client erronously gives all calls the CALL message type, even
+        % oneways.
+        {_, oneway_void} ->
+            State;
+        {?tMessageType_CALL, _} ->
             % The sender will be waiting for a response to this request
             add_pending(SenderPid, Content, Seqid, State);
         _ ->

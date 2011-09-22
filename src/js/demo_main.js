@@ -7,7 +7,7 @@ define(
     // jquery for the ui stuff
     "lib/jquery-1.6.2"], function(thrift, socketio_transport, json_protocol) {
         require.ready(function() {
-            var genjs_files = ["./shared_types", "./SharedService", "./tutorial_types", "./Calculator"],
+            var genjs_files = ["/js/gen/shared_types.js", "/js/gen/SharedService.js", "/js/gen/tutorial_types.js", "/js/gen/Calculator.js"],
                 genjs_modules = {
                     'thrift': thrift
                 },
@@ -173,7 +173,6 @@ define(
                     window.module = module;
                     real_require([jsfile], function() {
                         if (typeof(cb) === 'function') {
-                            // we need define so require.js finds the module.
                             merge(exports, result[module_name]);
                             if (module.hasOwnProperty('exports')) {
                                 merge(module.exports, result[module_name]);

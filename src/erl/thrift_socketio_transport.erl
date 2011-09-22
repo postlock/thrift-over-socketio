@@ -31,7 +31,7 @@
                recv_timeout=infinity}).
 -type state() :: #data{}.
 -include("thrift_transport_behaviour.hrl").
--define(TIMEOUT, 10000).
+-define(TIMEOUT, infinity).
 new(ClientPid) ->
     new(ClientPid, undefined, true).
 new(ClientPid, Content, ExpectReply) ->
@@ -62,7 +62,7 @@ read(This = #data{content = undefined}, Len) ->
     % so we wait for a while, then inform the shim that we've timed out.
     receive
         {reply, Content} ->
-            io:format("got reply which we waited on: ~p~n", [Content]),
+            %io:format("got reply which we waited on: ~p~n", [Content]),
             read(This#data{content=Content}, Len);
         Other ->
             io:format("got unexpected ~p in reply ~n", [Other])
